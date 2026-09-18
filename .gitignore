@@ -15,3 +15,12 @@ coverage/
 *.db-*
 .vscode/
 *.egg-info/
+.tools/
+artifacts/
+*.apk
+*.aab
+*.jks
+*.keystore
+!debug.keystore
+/apps/mobile/android/
+/apps/mobile/ios/
