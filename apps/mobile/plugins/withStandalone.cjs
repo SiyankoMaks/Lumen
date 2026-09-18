@@ -1,9 +1,29 @@
 const {
   withAndroidManifest,
   withAppBuildGradle,
+  withProjectBuildGradle,
 } = require("expo/config-plugins");
 
 module.exports = function withStandalone(config) {
+  config = withProjectBuildGradle(config, (mod) => {
+    if (!mod.modResults.contents.includes("// Lumen native job pools")) {
+      mod.modResults.contents += `
+// Lumen native job pools: constrain Ninja independently of Gradle workers.
+allprojects { subproject ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        subproject.plugins.withId(pluginId) {
+            subproject.extensions.getByName('android').defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                '-DCMAKE_JOB_POOLS=lumen_compile=1;lumen_link=1',
+                '-DCMAKE_JOB_POOL_COMPILE=lumen_compile',
+                '-DCMAKE_JOB_POOL_LINK=lumen_link'
+            ])
+        }
+    }
+}
+`;
+    }
+    return mod;
+  });
   config = withAndroidManifest(config, (mod) => {
     const app = mod.modResults.manifest.application[0].$;
     app["android:allowBackup"] = "false";

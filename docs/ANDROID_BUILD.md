@@ -28,6 +28,9 @@ TEMP и итоговый APK скрипт направляет в ToolsRoot. Д�
 Параметр CacheRoot отдельно задаёт Gradle/npm/TEMP; SDK, подпись и APK остаются
 в ToolsRoot. Следите за свободным местом на диске кэша.
 На этой машине используется один Gradle worker, heap 1536 МБ и Kotlin in-process.
+Ninja ограничен одним заданием компиляции/линковки через
+[CMake job pools](https://cmake.org/cmake/help/latest/variable/CMAKE_JOB_POOLS.html),
+поскольку его параллелизм задаётся отдельно от Gradle workers.
 Скрипт проверяет готовность SDK перед сборкой. `-SkipPrebuild` подходит для
 повторной компиляции неизменённого native-проекта после сетевого сбоя;
 при изменении app.json или config plugin запускайте обычную полную команду.

@@ -84,3 +84,6 @@
 - В manifest запрещены ненужные overlay/storage permissions: импорт использует
   системный ACTION_OPEN_DOCUMENT, экспорт — файл cache через share sheet.
 - Каталог signing и PKCS12-файлы исключены из Git. APK ещё не получен.
+- Для нативной C++ компиляции добавлены CMake/Ninja job pools: одно задание
+  компиляции/линковки. На машине мало доступной commit memory; лимит Gradle workers
+  сам по себе не задаёт пул Ninja. Проверка — предстоящая нативная сборка.
