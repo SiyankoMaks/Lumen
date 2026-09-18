@@ -17,6 +17,7 @@ coverage/
 *.egg-info/
 .tools/
 artifacts/
+hs_err_pid*.log
 *.apk
 *.aab
 *.jks

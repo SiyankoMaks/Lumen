@@ -1,5 +1,9 @@
 # Эксплуатация и выпуск
 
+С 18.09.2026 актуален автономный Android: [сборка APK](ANDROID_BUILD.md),
+[состояние](PROJECT_STATE.md), [ADR 003](adr/003-standalone-polza.md).
+Ниже сохранён исторический план выпуска облачной v0.1.
+
 Локальная реализация не равнозначна production release. До выпуска:
 
 - Собрать development/release builds Android и iOS, проверить на реальных

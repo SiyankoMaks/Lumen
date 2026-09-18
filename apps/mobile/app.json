@@ -4,11 +4,20 @@
     "slug": "lumen",
     "platforms": ["android", "ios"],
     "scheme": "lumen",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "plugins": ["expo-router", "expo-sqlite", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-secure-store",
+      "./plugins/withStandalone.cjs"
+    ],
     "ios": { "bundleIdentifier": "app.lumen.journal", "supportsTablet": true },
-    "android": { "package": "app.lumen.journal" }
+    "android": {
+      "package": "app.lumen.journal",
+      "versionCode": 2,
+      "allowBackup": false
+    }
   }
 }

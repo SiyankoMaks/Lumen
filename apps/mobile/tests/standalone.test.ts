@@ -81,12 +81,21 @@ test("v1 migration preserves unsent edits, original outbox and legacy conflict s
   const id = await old.save("entry", note("first"));
   await old.save("entry", note("unsent edit"), id);
   const oldQueue = await old.queue();
+  const snapshot = JSON.stringify(await old.get(id));
+  db.prepare("INSERT INTO conflicts VALUES (?,?,?,?)").run(
+    randomUUID(),
+    id,
+    snapshot,
+    snapshot,
+  );
+  const oldConflicts = await old.conflicts();
   const repo = new LocalRepository(adapter, randomUUID);
   await repo.migrate();
   await repo.migrate();
   assert.equal((await repo.get(id))?.content.text, "unsent edit");
   assert.equal((await repo.get(id))?.sync, "local");
   assert.deepEqual(await repo.queue(), oldQueue);
+  assert.deepEqual(await repo.conflicts(), oldConflicts);
   assert.equal((await repo.revision(id, 1))?.content.text, "unsent edit");
   assert.equal(db.prepare("SELECT COUNT(*) n FROM history").get()?.n, 3);
   db.close();
@@ -117,6 +126,11 @@ test("AI response saves evidence/provenance and exact history; editing preserves
   assert.deepEqual((await repo.get(item.id))?.content.ai, ai);
   assert.equal((await repo.history(item.id)).length, 2);
   assert.equal((await repo.statistics()).cost_rub, 0.125);
+  const restored = await setup();
+  await restored.repo.restoreBackup(await repo.backup());
+  assert.deepEqual((await restored.repo.get(item.id))?.content.ai, ai);
+  assert.equal((await restored.repo.history(item.id)).length, 2);
+  restored.db.close();
   db.close();
 });
 
