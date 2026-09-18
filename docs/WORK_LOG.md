@@ -75,3 +75,12 @@
   версий в Polza. Проверки: 5 UI/SecureStore tests passed; TypeScript passed.
 - Первая Gradle-сборка остановилась: Node в Expo autolinking завершился с
   кодом -2147483645. Та же команда отдельно выполняется; диагностируется окружение.
+
+## 2026-09-18 · BUILD-READY — ограничения памяти и SDK preflight
+
+- Повтор с heap 1536 МБ, одним worker и Kotlin in-process прошёл autolinking;
+  следующий стоп — ещё устанавливающийся NDK. Эти параметры внесены в скрипт.
+- Добавлены проверка комплектности SDK и SkipPrebuild для повторной сборки.
+- В manifest запрещены ненужные overlay/storage permissions: импорт использует
+  системный ACTION_OPEN_DOCUMENT, экспорт — файл cache через share sheet.
+- Каталог signing и PKCS12-файлы исключены из Git. APK ещё не получен.

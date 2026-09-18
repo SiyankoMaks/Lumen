@@ -22,6 +22,9 @@ hs_err_pid*.log
 *.aab
 *.jks
 *.keystore
+*.p12
+*.pfx
+signing/
 !debug.keystore
 /apps/mobile/android/
 /apps/mobile/ios/

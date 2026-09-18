@@ -1,4 +1,4 @@
-param([string]$ToolsRoot = 'E:\Lumen-build', [string]$CacheRoot = '')
+param([string]$ToolsRoot = 'E:\Lumen-build', [string]$CacheRoot = '', [switch]$SkipPrebuild)
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $ToolsRoot = [IO.Path]::GetFullPath($ToolsRoot)
@@ -13,10 +13,14 @@ $env:TEMP = Join-Path $CacheRoot 'temp'
 $env:TMP = $env:TEMP
 $env:npm_config_cache = Join-Path $CacheRoot 'npm-cache'
 $env:CI = '1'
+$env:NODE_OPTIONS = '--max-old-space-size=1536'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $signing = Join-Path $ToolsRoot 'signing'
 $artifacts = Join-Path $ToolsRoot 'artifacts'
 New-Item -ItemType Directory -Force -Path $signing,$artifacts,$env:TEMP | Out-Null
+foreach ($required in @('ndk/27.1.12297006/source.properties','platforms/android-36/android.jar','build-tools/36.0.0/aapt2.exe','cmake/3.22.1/bin/cmake.exe')) {
+    if (!(Test-Path -LiteralPath (Join-Path $env:ANDROID_HOME $required))) { throw "SDK installation is incomplete: $required" }
+}
 $env:LUMEN_KEYSTORE = Join-Path $signing 'lumen-release.jks'
 $passwordFile = Join-Path $signing 'password.txt'
 if (!(Test-Path -LiteralPath $env:LUMEN_KEYSTORE)) {
@@ -34,11 +38,13 @@ if (!(Test-Path -LiteralPath $env:LUMEN_KEYSTORE)) {
 $env:LUMEN_KEYSTORE_PASSWORD = [IO.File]::ReadAllText($passwordFile)
 Push-Location (Join-Path $repoRoot 'apps/mobile')
 try {
-    & npx.cmd expo prebuild --platform android --no-install
-    if ($LASTEXITCODE -ne 0) { throw 'Expo prebuild failed.' }
+    if (!$SkipPrebuild) {
+        & npx.cmd expo prebuild --platform android --no-install
+        if ($LASTEXITCODE -ne 0) { throw 'Expo prebuild failed.' }
+    } elseif (!(Test-Path -LiteralPath 'android/gradlew.bat')) { throw 'Run prebuild before using SkipPrebuild.' }
     Push-Location android
     try {
-        & .\gradlew.bat assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=768m' --console=plain
+        & .\gradlew.bat assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m' '-Pkotlin.compiler.execution.strategy=in-process' --console=plain
         if ($LASTEXITCODE -ne 0) { throw 'Gradle release build failed.' }
     } finally { Pop-Location }
     $version = (Get-Content app.json -Raw | ConvertFrom-Json).expo.version
