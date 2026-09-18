@@ -11,7 +11,7 @@ import * as Crypto from "expo-crypto";
 import * as Network from "expo-network";
 import { LocalRepository } from "../db/local";
 import { AIService } from "../ai/service";
-import { loadPolza, clearPolza } from "../ai/settings";
+import { loadPolza, clearDeviceSecrets } from "../ai/settings";
 import { ErrorState, Screen, Skeleton } from "./ui";
 type Context = {
   repo: LocalRepository;
@@ -80,7 +80,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
     await ai?.cancel();
     await ai?.idle();
     await repo?.clear();
-    await clearPolza();
+    await clearDeviceSecrets();
     changed();
   }
   if (fatal)

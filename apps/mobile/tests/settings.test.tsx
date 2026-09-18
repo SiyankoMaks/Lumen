@@ -1,5 +1,10 @@
 import * as SecureStore from "expo-secure-store";
-import { savePolza, loadPolza, clearPolza } from "../src/ai/settings";
+import {
+  savePolza,
+  loadPolza,
+  clearPolza,
+  clearDeviceSecrets,
+} from "../src/ai/settings";
 
 jest.mock("expo-secure-store", () => ({
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: "device-only",
@@ -40,4 +45,13 @@ test("invalid credentials never reach storage and errors do not echo the secret"
     }),
   ).rejects.toThrow("Введите корректный API-ключ Polza.");
   expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+});
+
+test("full device reset also removes the archived cloud session", async () => {
+  jest.clearAllMocks();
+  await clearDeviceSecrets();
+  expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
+    "lumen.polza.credentials.v1",
+  );
+  expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("lumen.session");
 });

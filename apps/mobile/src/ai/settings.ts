@@ -35,3 +35,8 @@ export async function savePolza(config: PolzaConfig) {
 export async function clearPolza() {
   await SecureStore.deleteItemAsync(KEY);
 }
+
+export async function clearDeviceSecrets() {
+  await clearPolza();
+  await SecureStore.deleteItemAsync("lumen.session");
+}

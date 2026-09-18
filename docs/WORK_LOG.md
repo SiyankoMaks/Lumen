@@ -87,3 +87,12 @@
 - Для нативной C++ компиляции добавлены CMake/Ninja job pools: одно задание
   компиляции/линковки. На машине мало доступной commit memory; лимит Gradle workers
   сам по себе не задаёт пул Ninja. Проверка — предстоящая нативная сборка.
+
+## 2026-09-18 · COMPAT-005 — patch-версии Expo и полный reset
+
+- `expo install --check` потребовал Expo 57.0.24, Router 57.0.22 и Sharing 57.0.21.
+  Обновлены эти patch-версии и транзитивный lockfile в пределах SDK 57.
+- Полная очистка устройства также удаляет архивную SecureStore-сессию v0.1;
+  обычное удаление ключа Polza остаётся отдельным действием.
+- Проверки после обновления: 19 core + 6 UI/SecureStore tests passed,
+  TypeScript passed, Expo compatibility check — Dependencies are up to date.
