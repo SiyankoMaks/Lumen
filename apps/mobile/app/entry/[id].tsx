@@ -107,7 +107,7 @@ export default function Editor() {
         <Button label="Готово" disabled={busy} onPress={() => void save()} />
       }
     >
-      {error && <ErrorState message={error} />}{" "}
+      {error && <ErrorState message={error} />}
       {!data ? (
         <Skeleton />
       ) : (
@@ -140,8 +140,8 @@ export default function Editor() {
             value={tags}
             onChangeText={setTags}
           />
-          {data.entry && <SyncBadge status={data.entry.sync} />}{" "}
-          {message && <ErrorState message={message} />}{" "}
+          {data.entry && <SyncBadge status={data.entry.sync} />}
+          {message && <ErrorState message={message} />}
           {!fresh && (
             <>
               <Button

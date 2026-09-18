@@ -26,7 +26,7 @@ export default function Search() {
         onChangeText={setQuery}
       />
       <Label muted>Поиск по тексту и тегам на этом устройстве.</Label>
-      {error && <ErrorState message={error} />}{" "}
+      {error && <ErrorState message={error} />}
       {!data ? (
         <Skeleton />
       ) : !query.trim() ? (

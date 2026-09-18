@@ -168,7 +168,7 @@ export default function Knowledge() {
   }
   return (
     <Screen key={id} title="Наблюдение">
-      {error && <ErrorState message={error} />}{" "}
+      {error && <ErrorState message={error} />}
       {!content || !data ? (
         <Skeleton />
       ) : (
@@ -276,7 +276,7 @@ export default function Knowledge() {
               label="Создать гипотезу"
               onPress={() => void create("hypothesis")}
             />
-          )}{" "}
+          )}
           {data.kind === "hypothesis" && data.sync === "local" && (
             <>
               <Button

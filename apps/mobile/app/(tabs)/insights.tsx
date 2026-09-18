@@ -89,8 +89,8 @@ export default function Insights() {
         value={tab}
         onChange={setTab}
       />
-      {error && <ErrorState message={error} />}{" "}
-      {message && <ErrorState message={message} />}{" "}
+      {error && <ErrorState message={error} />}
+      {message && <ErrorState message={message} />}
       {!rows ? (
         <Skeleton />
       ) : rows.length ? (

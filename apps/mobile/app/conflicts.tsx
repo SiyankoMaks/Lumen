@@ -104,7 +104,7 @@ export default function Conflicts() {
   );
   return (
     <Screen title="Конфликты">
-      {error && <ErrorState message={error} />}{" "}
+      {error && <ErrorState message={error} />}
       {!data ? (
         <Skeleton />
       ) : data.length ? (
