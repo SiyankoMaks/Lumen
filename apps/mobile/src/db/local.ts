@@ -100,12 +100,8 @@ export class LocalRepository extends Repository {
     const entries = new Set<string>();
     for (const ref of k.evidence) {
       const target = await this.get(ref.id);
-      if (
-        ref.id === id ||
-        !target ||
-        target.deleted_at ||
-        !(await this.revision(ref.id, ref.revision))
-      )
+      const snapshot = await this.revision(ref.id, ref.revision);
+      if (ref.id === id || !target || !snapshot || snapshot.deleted_at)
         throw new Error("Источник удалён или его точная версия недоступна.");
       if (target.kind === "entry") entries.add(ref.id);
     }
@@ -379,6 +375,7 @@ export class LocalRepository extends Repository {
   async restoreBackup(input: unknown) {
     const backup = backupSchema.parse(input);
     const ids = new Set(backup.entities.map((e) => e.id));
+    const currentEntities = new Map(backup.entities.map((e) => [e.id, e]));
     if (ids.size !== backup.entities.length)
       throw new Error("Повторяющиеся записи в архиве.");
     const refs = new Map(
@@ -390,6 +387,13 @@ export class LocalRepository extends Repository {
       const { ai, ...content } = e.content;
       contentFor(e.kind, content);
       if (!ids.has(e.id)) throw new Error("Неполный архив.");
+      const current = currentEntities.get(e.id)!;
+      if (
+        e.kind !== current.kind ||
+        e.revision > current.revision ||
+        e.created_at !== current.created_at
+      )
+        throw new Error("История не соответствует текущим записям архива.");
     }
     await this.transaction(async () => {
       for (const e of backup.entities) {

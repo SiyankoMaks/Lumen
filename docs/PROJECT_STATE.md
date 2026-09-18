@@ -7,7 +7,7 @@
 - Исходная v0.1 сохранена коммитом `d8b2cfa`; до этого весь код был незакоммичен.
 - Реализовано: standalone repository/migration, Polza service/settings, локальные
   AI jobs/статистика, экспорт/импорт, удаление cloud-зависимости из UI.
-- Проверено: 18 unit/integration тестов SQLite/AI, 4 UI/SecureStore теста,
+- Проверено: 19 unit/integration тестов SQLite/AI, 4 UI/SecureStore теста,
   TypeScript без ошибок.
 - Выполняется: подписанный Android APK. SDK и JDK размещены на E:.
 - Ключ Polza пользователь вводит после установки; реальные платные запросы

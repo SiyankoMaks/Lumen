@@ -273,6 +273,36 @@ test("duplicated AI evidence fails domain validation without losing usage", asyn
   db.close();
 });
 
+test("historical evidence survives source deletion; malformed future backup versions are rejected", async () => {
+  const { repo, db } = await setup();
+  const id = await repo.save("entry", note("source"));
+  const result = await repo.save("structured_entry", {
+    title: "Observation",
+    description: "",
+    status: "draft",
+    confidence: 0,
+    evidence: [{ id, revision: 1 }],
+    result: "",
+    success_criteria: "",
+  });
+  await repo.save("entry", note("source"), id, true, 1);
+  const { ai, ...content } = (await repo.get(result))!.content;
+  await repo.save(
+    "structured_entry",
+    { ...content, status: "archived" } as any,
+    result,
+    false,
+    1,
+  );
+  const backup = await repo.backup();
+  backup.revisions.push({ ...backup.entities[0], revision: 99 });
+  const target = await setup();
+  await assert.rejects(() => target.repo.restoreBackup(backup));
+  assert.equal((await target.repo.all()).length, 0);
+  db.close();
+  target.db.close();
+});
+
 test("missing key and invalid weekly period cause no job and no provider request", async () => {
   const { repo, db } = await setup();
   const id = await repo.save("entry", note("test"));
