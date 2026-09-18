@@ -1,0 +1,14 @@
+appId: app.lumen.journal
+---
+- launchApp
+- tapOn: "Новая запись"
+- tapOn: "Текст записи"
+- inputText: "Offline observation"
+- tapOn: "Готово"
+- assertVisible: "Offline observation"
+- tapOn: "Открыть запись: Offline observation"
+- tapOn: "Текст записи"
+- eraseText
+- inputText: "Edited offline observation"
+- tapOn: "Готово"
+- assertVisible: "Edited offline observation"

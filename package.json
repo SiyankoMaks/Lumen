@@ -1,0 +1,31 @@
+{
+  "name": "lumen",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "packages/api-client"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace @lumen/mobile",
+    "typecheck": "npm run typecheck --workspace @lumen/mobile",
+    "test": "tsx --test apps/mobile/tests/*.test.ts",
+    "test:ui": "npm exec --workspace @lumen/mobile -- jest --runInBand",
+    "contracts": "openapi-typescript docs/api/openapi.json -o packages/api-client/schema.d.ts",
+    "format": "prettier --write apps/mobile packages/api-client docs *.json *.yml",
+    "format:check": "prettier --check apps/mobile packages/api-client docs *.json *.yml"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-test-renderer": "19.2.3"
+  },
+  "dependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

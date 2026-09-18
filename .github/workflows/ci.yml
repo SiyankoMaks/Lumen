@@ -1,0 +1,50 @@
+name: Quality
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lumen
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: lumen_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U lumen"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://lumen:test-password@localhost:5432/lumen_test
+      TEST_DATABASE_URL: postgresql+psycopg://lumen:test-password@localhost:5432/lumen_test
+      JWT_SECRET: ci-only-secret-never-use-in-production-123456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: pip install -c services/api/constraints.txt -e 'services/api[dev]'
+      - run: npm ci
+      - run: ruff check --config ruff.toml services/api scripts
+      - run: ruff format --config ruff.toml --check services/api scripts
+      - run: alembic -c services/api/alembic.ini upgrade head
+      - run: alembic -c services/api/alembic.ini check
+      - run: alembic -c services/api/alembic.ini downgrade base
+      - run: pytest services/api/tests -q
+      - run: python scripts/export_openapi.py
+      - run: npm run contracts
+      - run: npx prettier --write docs/api/openapi.json packages/api-client/schema.d.ts
+      - run: git diff --exit-code -- docs/api/openapi.json packages/api-client/schema.d.ts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:ui
+      - run: npm run format:check
+      - run: npx expo install --check
+        working-directory: apps/mobile
+      - run: npx expo export --platform android --output-dir dist
+        working-directory: apps/mobile
+      - run: npm audit --audit-level=high

@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lumen
+      POSTGRES_DB: lumen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U lumen]
+      interval: 5s
+      retries: 15
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      retries: 15
+  migrate:
+    build: ./services/api
+    env_file: .env
+    environment: &environment
+      DATABASE_URL: postgresql+psycopg://lumen:${POSTGRES_PASSWORD}@postgres:5432/lumen
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
+  api:
+    build: ./services/api
+    env_file: .env
+    environment: *environment
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+  worker:
+    build: ./services/api
+    env_file: .env
+    environment: *environment
+    command: celery -A app.workers.celery worker --loglevel=WARNING
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+  scheduler:
+    build: ./services/api
+    env_file: .env
+    environment: *environment
+    command: celery -A app.workers.celery beat --loglevel=WARNING --schedule=/tmp/celerybeat
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+volumes:
+  postgres:
+  redis:
