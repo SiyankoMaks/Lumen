@@ -1,15 +1,17 @@
-param([string]$ToolsRoot = 'E:\Lumen-build')
+param([string]$ToolsRoot = 'E:\Lumen-build', [string]$CacheRoot = '')
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $ToolsRoot = [IO.Path]::GetFullPath($ToolsRoot)
+if (!$CacheRoot) { $CacheRoot = $ToolsRoot }
+$CacheRoot = [IO.Path]::GetFullPath($CacheRoot)
 $env:JAVA_HOME = (Get-ChildItem -LiteralPath (Join-Path $ToolsRoot 'java') -Directory | Select-Object -First 1).FullName
 if (!$env:JAVA_HOME) { throw 'Install JDK 21 into ToolsRoot/java first.' }
 $env:ANDROID_HOME = Join-Path $ToolsRoot 'android-sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-$env:GRADLE_USER_HOME = Join-Path $ToolsRoot 'gradle'
-$env:TEMP = Join-Path $ToolsRoot 'temp'
+$env:GRADLE_USER_HOME = Join-Path $CacheRoot 'gradle'
+$env:TEMP = Join-Path $CacheRoot 'temp'
 $env:TMP = $env:TEMP
-$env:npm_config_cache = Join-Path $ToolsRoot 'npm-cache'
+$env:npm_config_cache = Join-Path $CacheRoot 'npm-cache'
 $env:CI = '1'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $signing = Join-Path $ToolsRoot 'signing'

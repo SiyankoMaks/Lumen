@@ -17,12 +17,16 @@ signing отдельно: без того же ключа Android не разр�
 ```powershell
 npm ci
 ./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build
+# Если внешний диск медленный, рабочий кэш можно направить на NTFS:
+./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache
 ```
 
 Сборку лучше запускать из checkout на диске с запасом места: node_modules и
 нативные промежуточные файлы размещаются рядом с исходниками. Gradle, SDK,
 TEMP и итоговый APK скрипт направляет в ToolsRoot. Для workspace npm на Windows
 нужна файловая система с junction (NTFS).
+Параметр CacheRoot отдельно задаёт Gradle/npm/TEMP; SDK, подпись и APK остаются
+в ToolsRoot. Следите за свободным местом на диске кэша.
 
 Проверка подписи: `apksigner verify --verbose <apk>`. Установка при подключённом
 телефоне: `adb install -r <apk>`. Или перенесите APK на телефон и откройте файл,
