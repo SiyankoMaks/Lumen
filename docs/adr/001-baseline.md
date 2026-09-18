@@ -1,5 +1,8 @@
 # ADR 001 — стек и shared revision envelope
 
+Статус: серверная часть решения заменена [ADR 003](003-standalone-polza.md)
+для автономного Android-клиента. Ниже сохранено исходное решение v0.1.
+
 Принято: Expo SDK 57 / Router / SQLite / SecureStore, Python FastAPI / SQLAlchemy
 2 / Alembic / PostgreSQL 16. Совместимые native версии взяты из manifest Expo.
 Реализация клиента ориентирована на Android/iOS. Будущий web использует тот же REST.

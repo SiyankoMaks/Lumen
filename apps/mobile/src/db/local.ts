@@ -281,10 +281,13 @@ export class LocalRepository extends Repository {
       const permitted = new Set(sources.map((r) => `${r.id}/${r.revision}`));
       const ids: string[] = [];
       // Validate all items before writing any entity.
-      const parsed = items.map((item) => ({
-        ...knowledgeSchema.parse(item),
-        status: "draft" as const,
-      }));
+      const parsed = items.map(
+        (item) =>
+          contentFor(job.kind, {
+            ...knowledgeSchema.parse(item),
+            status: "draft",
+          }) as ReturnType<typeof knowledgeSchema.parse>,
+      );
       for (const item of parsed) {
         if (item.evidence.some((r) => !permitted.has(`${r.id}/${r.revision}`)))
           throw new Error("invalid_evidence");

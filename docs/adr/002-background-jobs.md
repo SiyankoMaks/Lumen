@@ -1,5 +1,8 @@
 # ADR 002 — Celery и долговечная очередь заданий
 
+Статус: заменено [ADR 003](003-standalone-polza.md) для Android-клиента;
+автономное приложение использует локальные задания без Celery и Redis.
+
 Celery + Redis — зрелый механизм фоновых задач, отдельный worker не блокирует API.
 Запись Job в PostgreSQL является источником истины и transactional outbox.
 Сбой публикации в Redis не теряет задачу: beat повторяет dispatch. Row lock,

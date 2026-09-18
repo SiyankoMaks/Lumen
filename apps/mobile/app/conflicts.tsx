@@ -75,7 +75,7 @@ function Versions({
       />
       <Button
         secondary
-        label="Использовать облачную"
+        label="Использовать архивную серверную"
         onPress={() => void resolve(server)}
       />
       <Label>Объединить вручную</Label>

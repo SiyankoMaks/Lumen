@@ -250,6 +250,29 @@ test("Polza transport fixes destination, captures RUB usage, never retries or le
   );
 });
 
+test("duplicated AI evidence fails domain validation without losing usage", async () => {
+  const { repo, db } = await setup();
+  const id = await repo.save("entry", note("source"));
+  const { provider } = fake({
+    items: [
+      {
+        title: "Invalid duplicate",
+        evidence: [
+          { id, revision: 1 },
+          { id, revision: 1 },
+        ],
+      },
+    ],
+  });
+  const service = new AIService(repo, async () => config, provider);
+  await service.start("structured_entry", [{ id, revision: 1 }]);
+  await service.idle();
+  assert.equal((await repo.jobs())[0].status, "failed");
+  assert.equal((await repo.all("structured_entry")).length, 0);
+  assert.equal((await repo.statistics()).cost_rub, usage.cost_rub);
+  db.close();
+});
+
 test("missing key and invalid weekly period cause no job and no provider request", async () => {
   const { repo, db } = await setup();
   const id = await repo.save("entry", note("test"));
