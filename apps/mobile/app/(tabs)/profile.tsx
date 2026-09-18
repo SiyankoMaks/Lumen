@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import * as Picker from "expo-document-picker";
 import { useLumen, useLocal } from "../../src/shared/provider";
+import { loadPolza, savePolza, clearPolza } from "../../src/ai/settings";
+import { Polza, PolzaError, aiErrors } from "../../src/ai/polza";
 import {
   AppCard,
   Button,
@@ -13,180 +16,289 @@ import {
   Screen,
 } from "../../src/shared/ui";
 export default function Profile() {
-  const { client, repo, sync, signOut, deleteAccount } = useLumen();
+  const { repo, ai, changed, clearData } = useLumen();
   const { data } = useLocal(async (r) => ({
-    queue: await r.queue(),
+    stats: await r.statistics(),
     conflicts: await r.conflicts(),
   }));
-  const [message, setMessage] = useState(""),
-    [deleting, setDeleting] = useState(false),
-    [email, setEmail] = useState(""),
-    [password, setPassword] = useState("");
+  const [apiKey, setKey] = useState(""),
+    [model, setModel] = useState(""),
+    [limit, setLimit] = useState("2048"),
+    [saved, setSaved] = useState(false),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false),
+    [models, setModels] = useState<{ id: string; name: string }[]>([]),
+    [search, setSearch] = useState("");
+  useEffect(() => {
+    void loadPolza()
+      .then((c) => {
+        if (c) {
+          setKey(c.apiKey);
+          setModel(c.model);
+          setLimit(String(c.maxTokens));
+          setSaved(true);
+        }
+      })
+      .catch(() =>
+        setMessage("Не удалось прочитать настройки ключа. Введите его заново."),
+      );
+  }, []);
+  async function persist() {
+    try {
+      await savePolza({ apiKey, model, maxTokens: Number(limit) });
+      setSaved(true);
+      setMessage("Ключ и модель сохранены в защищённом хранилище телефона.");
+    } catch (e) {
+      setMessage(
+        e instanceof Error ? e.message : "Не удалось сохранить настройки.",
+      );
+    }
+  }
+  async function catalog() {
+    setBusy(true);
+    const c = new AbortController(),
+      timer = setTimeout(() => c.abort(), 20000);
+    try {
+      setModels(await new Polza().models(apiKey, c.signal));
+      setMessage(
+        "Каталог получен. Выберите модель, поддерживающую JSON schema, и сохраните настройки.",
+      );
+    } catch (e) {
+      setMessage(
+        e instanceof PolzaError
+          ? aiErrors[e.code]
+          : "Не удалось получить каталог.",
+      );
+    } finally {
+      clearTimeout(timer);
+      setBusy(false);
+    }
+  }
   async function exportData() {
     try {
-      const local = await repo.export();
-      let cloud: unknown = null;
-      if (client.tokens) cloud = await client.request("/account/export");
-      const file = new File(Paths.cache, "lumen-export.json");
-      file.write(JSON.stringify({ format_version: 1, local, cloud }, null, 2));
+      const file = new File(Paths.cache, "lumen-backup.json");
+      file.write(JSON.stringify(await repo.backup(), null, 2));
       try {
         await Sharing.shareAsync(file.uri, { mimeType: "application/json" });
       } finally {
         file.delete();
       }
+      setMessage(
+        "Архив подготовлен. Убедитесь, что вы сохранили его в выбранное место. API-ключ в архив не входит.",
+      );
     } catch {
-      setMessage("Экспорт не завершён. Проверьте соединение и повторите.");
+      setMessage("Не удалось создать архив. Проверьте свободное место.");
     }
   }
-  async function remove() {
+  async function importData() {
     try {
-      await deleteAccount(email, password);
-      setDeleting(false);
-      setPassword("");
-      router.replace("/");
-    } catch {
-      setMessage(
-        "Удаление не выполнено. Проверьте почту, пароль и соединение.",
-      );
+      const picked = await Picker.getDocumentAsync({
+        type: "application/json",
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled) return;
+      const file = new File(picked.assets[0].uri);
+      try {
+        if (file.size > 50 * 1024 * 1024)
+          throw new Error("Архив больше 50 МБ.");
+        const n = await repo.restoreBackup(JSON.parse(await file.text()));
+        changed();
+        setMessage(
+          `Архив проверен: ${n} записей. Существующие отличающиеся версии не перезаписываются.`,
+        );
+      } finally {
+        file.delete();
+      }
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Импорт не выполнен.");
     }
   }
   return (
-    <Screen title="Ваше пространство">
+    <Screen title="Настройки">
       <AppCard>
+        <Label>Ваш личный журнал</Label>
+        <Label muted>
+          Работает на телефоне без аккаунта Lumen и собственного сервера. В
+          Polza отправляются только выбранные вами записи.
+        </Label>
+      </AppCard>
+      <AppCard>
+        <Label>Polza AI</Label>
+        <Label muted>
+          {saved
+            ? "Ключ сохранён на этом телефоне."
+            : "Добавьте ваш ключ Polza и выберите модель."}
+        </Label>
+        <Input
+          accessibilityLabel="API-ключ Polza"
+          placeholder="API-ключ Polza"
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={apiKey}
+          onChangeText={(v) => {
+            setKey(v);
+            setSaved(false);
+          }}
+        />
+        <Input
+          accessibilityLabel="ID модели Polza"
+          placeholder="ID модели из каталога Polza"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={model}
+          onChangeText={(v) => {
+            setModel(v);
+            setSaved(false);
+          }}
+        />
+        <Label muted>Лимит токенов ответа · 256–8192</Label>
+        <Input
+          accessibilityLabel="Лимит токенов"
+          value={limit}
+          onChangeText={(v) => {
+            setLimit(v);
+            setSaved(false);
+          }}
+          keyboardType="number-pad"
+        />
+        <Button label="Сохранить настройки AI" onPress={() => void persist()} />
+        <Button
+          secondary
+          label="Проверить ключ и загрузить модели"
+          disabled={busy || apiKey.length < 10}
+          onPress={() => void catalog()}
+        />
+        {models.length > 0 && (
+          <>
+            <Input
+              accessibilityLabel="Поиск модели"
+              placeholder="Поиск в каталоге"
+              value={search}
+              onChangeText={setSearch}
+            />
+            {models
+              .filter((m) =>
+                `${m.name} ${m.id}`
+                  .toLowerCase()
+                  .includes(search.toLowerCase()),
+              )
+              .slice(0, 15)
+              .map((m) => (
+                <Button
+                  secondary
+                  key={m.id}
+                  label={`${m.name} · ${m.id}`}
+                  onPress={() => {
+                    setModel(m.id);
+                    setSaved(false);
+                  }}
+                />
+              ))}
+          </>
+        )}
+        <Label muted>
+          Запросы оплачиваются с вашего баланса Polza. Проверка каталога не
+          запускает генерацию. Автоматических платных повторов нет.
+        </Label>
+        <Button
+          secondary
+          label="Удалить сохранённый ключ"
+          onPress={() =>
+            Alert.alert("Удалить ключ?", "Записи останутся на телефоне.", [
+              { text: "Отмена" },
+              {
+                text: "Удалить",
+                onPress: () =>
+                  void ai
+                    .cancel()
+                    .then(() => clearPolza())
+                    .then(() => {
+                      setKey("");
+                      setSaved(false);
+                      setMessage("Ключ удалён.");
+                    })
+                    .catch(() => setMessage("Не удалось удалить ключ.")),
+              },
+            ])
+          }
+        />
+      </AppCard>
+      {message && <ErrorState message={message} />}
+      <AppCard>
+        <Label>Статистика приложения</Label>
         <Label>
-          {client.tokens ? "Аккаунт подключён" : "Локальный журнал"}
+          Записей: {data?.stats.entries ?? 0} · Наблюдений:{" "}
+          {data?.stats.insights ?? 0}
         </Label>
-        <Label muted>
-          {client.tokens
-            ? "Записи синхронизируются с вашим аккаунтом."
-            : "Можно писать без аккаунта и подключить облако позже."}
+        <Label>
+          Запросов: {data?.stats.requests ?? 0} · Успешных:{" "}
+          {data?.stats.completed ?? 0}
         </Label>
-        {!client.tokens && (
-          <Button
-            label="Войти или зарегистрироваться"
-            onPress={() => router.push("/auth")}
-          />
-        )}
-        {client.tokens && (
-          <Button
-            secondary
-            label="Войти заново"
-            onPress={() => router.push("/auth")}
-          />
+        <Label>Учтено токенов: {data?.stats.tokens ?? 0}</Label>
+        <Label>
+          Подтверждено Polza: {(data?.stats.cost_rub ?? 0).toFixed(4)} ₽
+        </Label>
+        {!!data?.stats.unknown && (
+          <Label muted>
+            Стоимость {data.stats.unknown} запросов не подтверждена. Итог может
+            быть выше; проверьте баланс Polza.
+          </Label>
         )}
       </AppCard>
-      <AppCard>
-        <Label>Синхронизация</Label>
-        <Label muted>
-          В очереди: {data?.queue.length ?? 0} · Конфликтов:{" "}
-          {data?.conflicts.length ?? 0}
-        </Label>
-        <Button
-          secondary
-          label="Синхронизировать сейчас"
-          onPress={() => void sync()}
-        />
-        <Button
-          secondary
-          label="Разрешить конфликты"
-          onPress={() => router.push("/conflicts")}
-        />
-      </AppCard>
+      <Button
+        secondary
+        label="Экспортировать резервную копию"
+        onPress={() => void exportData()}
+      />
+      <Button
+        secondary
+        label="Импортировать резервную копию"
+        onPress={() => void importData()}
+      />
+      <Label muted>
+        Архив содержит личные записи в читаемом JSON. Храните его в доверенном
+        месте. Удаление приложения может удалить локальный журнал.
+      </Label>
       <Button
         secondary
         label="Календарь"
         onPress={() => router.push("/calendar")}
       />
-      <AppCard>
-        <Label>AI и приватность</Label>
-        <Label muted>
-          Анализ запускается только по вашему запросу. Перед отправкой вы
-          видите, какие данные будут переданы провайдеру. Выводы остаются
-          предположениями, их можно исправлять.
-        </Label>
-        <Label muted>
-          Тема: тёмная. Данные на устройстве хранятся в SQLite; ключи AI
-          находятся только на сервере.
-        </Label>
-      </AppCard>
+      {!!data?.conflicts.length && (
+        <Button
+          secondary
+          label="Разобрать версии из старой синхронизации"
+          onPress={() => router.push("/conflicts")}
+        />
+      )}
       <Button
         secondary
-        label="Экспортировать данные"
-        onPress={() => void exportData()}
+        label="Удалить все данные с телефона"
+        onPress={() =>
+          Alert.alert(
+            "Удалить журнал и ключ?",
+            "Это действие необратимо. Сначала сохраните резервную копию.",
+            [
+              { text: "Отмена", style: "cancel" },
+              {
+                text: "Удалить",
+                style: "destructive",
+                onPress: () =>
+                  void clearData()
+                    .then(() => {
+                      setKey("");
+                      setModel("");
+                      setSaved(false);
+                      router.replace("/");
+                    })
+                    .catch(() => setMessage("Не удалось очистить данные.")),
+              },
+            ],
+          )
+        }
       />
-      {message && <ErrorState message={message} />}{" "}
-      {client.tokens && (
-        <>
-          <Button
-            secondary
-            label="Выйти и очистить устройство"
-            onPress={() =>
-              Alert.alert(
-                "Выйти из аккаунта?",
-                `Локальные данные будут удалены. Несинхронизированных операций: ${data?.queue.length ?? 0}. При необходимости сначала экспортируйте данные.`,
-                [
-                  { text: "Отмена", style: "cancel" },
-                  {
-                    text: "Выйти",
-                    style: "destructive",
-                    onPress: () =>
-                      void signOut().catch(() =>
-                        setMessage(
-                          "Не удалось выйти из облака. Проверьте соединение; локальные данные сохранены.",
-                        ),
-                      ),
-                  },
-                ],
-              )
-            }
-          />
-          <Button
-            secondary
-            label="Удалить аккаунт"
-            onPress={() => setDeleting(!deleting)}
-          />
-          {deleting && (
-            <AppCard>
-              <Label>Удаление аккаунта и всех данных</Label>
-              <Label muted>
-                Подтвердите почту и пароль. Действие необратимо.
-              </Label>
-              <Input
-                accessibilityLabel="Почта для удаления"
-                placeholder="Почта"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <Input
-                accessibilityLabel="Пароль для удаления"
-                placeholder="Пароль"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-              <Button
-                label="Подтвердить удаление"
-                onPress={() =>
-                  Alert.alert(
-                    "Удалить все данные?",
-                    "Серверные записи и локальный журнал будут удалены.",
-                    [
-                      { text: "Отмена" },
-                      {
-                        text: "Удалить",
-                        style: "destructive",
-                        onPress: () => void remove(),
-                      },
-                    ],
-                  )
-                }
-              />
-            </AppCard>
-          )}
-        </>
-      )}
-      <Label muted>Lumen 0.1 · Личное пространство наблюдений</Label>
+      <Label muted>Lumen 0.2 · Автономная версия</Label>
     </Screen>
   );
 }

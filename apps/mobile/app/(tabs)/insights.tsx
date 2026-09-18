@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
-import * as Crypto from "expo-crypto";
-import { useQuery } from "@tanstack/react-query";
 import { useLocal, useLumen } from "../../src/shared/provider";
+import { aiErrors } from "../../src/ai/polza";
+import type { AIKind } from "../../src/domain/local";
 import {
   AppCard,
   Button,
@@ -13,66 +13,68 @@ import {
   Label,
   Screen,
   Skeleton,
-  SyncBadge,
 } from "../../src/shared/ui";
 export default function Insights() {
   const [tab, setTab] = useState("pattern"),
     [message, setMessage] = useState("");
-  const { data, error } = useLocal((r) => r.all());
-  const { client, sync } = useLumen();
-  const jobs = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () =>
-      client.request<
-        { id: string; kind: string; status: string; error: string | null }[]
-      >("/ai/jobs"),
-    enabled: !!client.tokens,
-    refetchInterval: 15000,
-  });
-  async function analyze(kind: string) {
-    if (!client.tokens) {
-      router.push("/auth");
-      return;
-    }
-    const monday = new Date();
-    monday.setHours(0, 0, 0, 0);
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-    const sources = (data ?? [])
-      .filter(
-        (e) =>
-          e.sync === "synced" &&
-          (kind === "weekly_review"
-            ? new Date(String(e.content.occurred_at ?? e.created_at)) >= monday
-            : kind === "pattern"
-              ? e.kind === "entry"
-              : e.kind === "pattern"),
+  const { data, error } = useLocal(async (r) => ({
+    entities: await r.all(),
+    jobs: await r.jobs(),
+  }));
+  const { ai } = useLumen();
+  function analyze(kind: AIKind) {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const end = new Date();
+    const sources = (data?.entities ?? [])
+      .filter((e) =>
+        kind === "weekly_review"
+          ? (e.kind !== "entry" &&
+              ["active", "completed"].includes(String(e.content.status))) ||
+            (new Date(String(e.content.occurred_at ?? e.created_at)) >= start &&
+              new Date(String(e.content.occurred_at ?? e.created_at)) < end)
+          : kind === "pattern"
+            ? e.kind === "entry"
+            : e.kind === "pattern",
       )
       .slice(0, 100);
     if (!sources.length) {
-      setMessage("Для анализа нужны синхронизированные записи или паттерны.");
+      setMessage("Пока нет подходящих источников. Сначала создайте записи.");
       return;
     }
-    try {
-      await client.request("/ai/jobs", "POST", {
-        operation_id: Crypto.randomUUID(),
-        kind,
-        sources: sources.map((e) => ({ id: e.id, revision: e.revision })),
-        ...(kind === "weekly_review"
-          ? {
-              period_start: monday.toISOString(),
-              period_end: new Date().toISOString(),
-            }
-          : {}),
-      });
-      setMessage(
-        "Запрос поставлен в очередь. Анализ можно просмотреть после завершения.",
-      );
-      void jobs.refetch();
-    } catch {
-      setMessage("Не удалось запустить анализ. Записи сохранены.");
-    }
+    Alert.alert(
+      "Анализ в Polza",
+      `Будет отправлено источников: ${sources.length}. Запрос оплачивается с вашего баланса Polza.`,
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Отправить",
+          onPress: () =>
+            void ai
+              .start(
+                kind,
+                sources.map((e) => ({ id: e.id, revision: e.revision })),
+                kind === "weekly_review"
+                  ? {
+                      period_start: start.toISOString(),
+                      period_end: end.toISOString(),
+                    }
+                  : {},
+              )
+              .then(() =>
+                setMessage("Анализ начат. Оставьте приложение открытым."),
+              )
+              .catch((e) =>
+                setMessage(
+                  e instanceof Error ? e.message : "Не удалось начать анализ.",
+                ),
+              ),
+        },
+      ],
+    );
   }
-  const rows = data?.filter((e) => e.kind === tab);
+  const rows = data?.entities.filter((e) => e.kind === tab);
   return (
     <Screen title="Инсайты">
       <Label muted>Наблюдения, которые можно проверить.</Label>
@@ -97,10 +99,8 @@ export default function Insights() {
             <Label>{String(e.content.title)}</Label>
             <Label muted>{String(e.content.description ?? "")}</Label>
             <Label muted>
-              Связанных источников:{" "}
-              {(e.content.evidence as unknown[])?.length ?? 0}
+              Источников: {(e.content.evidence as unknown[])?.length ?? 0}
             </Label>
-            <SyncBadge status={e.sync} />
             <Button
               secondary
               label="Подробнее и доказательства"
@@ -111,71 +111,56 @@ export default function Insights() {
       ) : (
         <EmptyState
           title="Пока нет наблюдений"
-          description="Выводы появятся, когда накопится достаточно связанных записей. Каждый вывод сохраняет ссылки на источники."
+          description="Выводы появятся после анализа ваших записей. Каждый вывод связан с источниками."
         />
       )}
       {["pattern", "hypothesis", "weekly_review"].includes(tab) && (
         <Button
           label="Запросить анализ"
-          onPress={() =>
-            Alert.alert(
-              "Анализ выбранных данных",
-              "В AI будут отправлены до 100 подходящих синхронизированных источников: записи для паттернов, паттерны для гипотез или данные текущей недели для обзора.",
-              [
-                { text: "Отмена", style: "cancel" },
-                { text: "Отправить", onPress: () => void analyze(tab) },
-              ],
-            )
-          }
+          onPress={() => analyze(tab as AIKind)}
         />
       )}
-      {jobs.data
-        ?.filter((j) => j.status !== "completed")
-        .map((j) => (
-          <AppCard key={j.id}>
-            {["queued", "running"].includes(j.status) && (
-              <Button
-                secondary
-                label="Отменить анализ"
-                onPress={() =>
-                  void client
-                    .request(`/ai/jobs/${j.id}/cancel`, "POST")
-                    .then(() => jobs.refetch())
-                    .catch(() => setMessage("Не удалось отменить анализ."))
-                }
-              />
-            )}
-            <Label>
-              {(
+      <Button
+        secondary
+        label="Настроить Polza"
+        onPress={() => router.push("/profile")}
+      />
+      {data?.jobs.slice(0, 10).map((job) => (
+        <AppCard key={job.id}>
+          <Label>
+            {
+              (
                 {
-                  queued: "В очереди",
+                  queued: "Подготовка",
                   running: "Анализируем…",
+                  completed: JSON.parse(job.result_ids).length
+                    ? "Анализ завершён"
+                    : "Анализ завершён: данных для вывода недостаточно",
                   failed: "Анализ не завершён",
-                  cancelled: "Отменён",
+                  cancelled: "Анализ отменён",
+                  interrupted: "Анализ был прерван",
                 } as Record<string, string>
-              )[j.status] ?? j.status}
+              )[job.status]
+            }
+          </Label>
+          <Label muted>
+            {new Date(job.created_at).toLocaleString("ru-RU")} · {job.model}
+          </Label>
+          {job.error && (
+            <Label muted>
+              {aiErrors[job.error] ??
+                "Ответ не удалось применить. Записи сохранены."}
             </Label>
-            {j.status === "failed" && (
-              <>
-                <Label muted>
-                  Записи сохранены. Проверьте доступность AI в настройках
-                  сервера.
-                </Label>
-                <Button
-                  secondary
-                  label="Повторить анализ"
-                  onPress={() =>
-                    void client
-                      .request(`/ai/jobs/${j.id}/retry`, "POST")
-                      .then(() => jobs.refetch())
-                      .catch(() => setMessage("Не удалось повторить запрос."))
-                  }
-                />
-              </>
-            )}
-          </AppCard>
-        ))}
-      <Button secondary label="Обновить" onPress={() => void sync()} />
+          )}
+          {["queued", "running"].includes(job.status) && (
+            <Button
+              secondary
+              label="Отменить анализ"
+              onPress={() => void ai.cancel(job.id)}
+            />
+          )}
+        </AppCard>
+      ))}
     </Screen>
   );
 }

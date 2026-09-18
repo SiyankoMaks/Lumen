@@ -205,6 +205,7 @@ export function Chips({
   );
 }
 const syncLabels: Record<string, string> = {
+  local: "Сохранено на телефоне",
   synced: "Синхронизировано",
   pending: "Сохранено на устройстве",
   conflict: "Есть две версии",
@@ -213,7 +214,7 @@ const syncLabels: Record<string, string> = {
 };
 export function SyncBadge({ status }: { status: string }) {
   const Icon =
-    status === "synced"
+    status === "synced" || status === "local"
       ? CloudCheck
       : status === "conflict" || status === "blocked"
         ? TriangleAlert

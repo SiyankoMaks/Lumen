@@ -12,7 +12,8 @@
     "test:ui": "npm exec --workspace @lumen/mobile -- jest --runInBand",
     "contracts": "openapi-typescript docs/api/openapi.json -o packages/api-client/schema.d.ts",
     "format": "prettier --write apps/mobile packages/api-client docs *.json *.yml",
-    "format:check": "prettier --check apps/mobile packages/api-client docs *.json *.yml"
+    "format:check": "prettier --check apps/mobile packages/api-client docs *.json *.yml",
+    "metrics": "node scripts/project-metrics.mjs"
   },
   "devDependencies": {
     "openapi-typescript": "^7.6.1",

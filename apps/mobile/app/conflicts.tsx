@@ -25,7 +25,7 @@ function Versions({
   conflict: LocalConflict;
   local: LocalEntity | null;
 }) {
-  const { repo, changed, sync } = useLumen();
+  const { repo, changed } = useLumen();
   const server: Entity = JSON.parse(conflict.server_snapshot);
   const current = local ?? JSON.parse(conflict.local_snapshot);
   const [text, setText] = useState(
@@ -46,7 +46,6 @@ function Versions({
         !!choice.deleted_at,
       );
       changed();
-      void sync();
     } catch {
       setError("Не удалось сохранить решение. Обе версии сохранены.");
     }
@@ -62,7 +61,7 @@ function Versions({
         other={String(server.content.text ?? server.content.description)}
       />
       <Label muted>
-        Версия в облаке · ревизия {server.revision}
+        Архивная серверная версия · ревизия {server.revision}
         {server.deleted_at ? " · удалена" : ""}
       </Label>
       <VersionText

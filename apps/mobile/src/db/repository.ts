@@ -57,13 +57,13 @@ export class Repository {
     this.chain = next.catch(() => {});
     return next;
   }
-  async migrate() {
+  async migrate(maxVersion = 1) {
     await this.db.execAsync("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
     await this.transaction(async () => {
       const version = await this.db.getFirstAsync<{ user_version: number }>(
         "PRAGMA user_version",
       );
-      if ((version?.user_version ?? 0) > 1)
+      if ((version?.user_version ?? 0) > maxVersion)
         throw new Error("Требуется новая версия приложения");
       if (!version?.user_version)
         await this.db.execAsync(`

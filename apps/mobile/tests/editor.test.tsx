@@ -8,13 +8,12 @@ import {
 import { router } from "expo-router";
 import Editor from "../app/entry/[id]";
 const mockSave = jest.fn();
-const mockSync = jest.fn();
+const mockAI = jest.fn();
 jest.mock("../src/shared/provider", () => ({
   useLumen: () => ({
     repo: { save: mockSave },
     changed: jest.fn(),
-    sync: mockSync,
-    client: { tokens: null },
+    ai: { start: mockAI },
   }),
   useLocal: () => ({
     data: { entry: null, history: [], structures: [] },
@@ -25,8 +24,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSave.mockResolvedValue("local-id");
 });
-test("saves locally before cloud completion and closes editor", async () => {
-  mockSync.mockReturnValue(new Promise(() => {}));
+test("saves offline and closes editor without an AI request", async () => {
   render(<Editor />);
   fireEvent.changeText(
     screen.getByLabelText("Текст записи"),
@@ -43,6 +41,7 @@ test("saves locally before cloud completion and closes editor", async () => {
     ),
   );
   await waitFor(() => expect(router.back).toHaveBeenCalled());
+  expect(mockAI).not.toHaveBeenCalled();
 });
 test("storage failure preserves text and stays in editor", async () => {
   mockSave.mockRejectedValue(new Error("Недостаточно места"));

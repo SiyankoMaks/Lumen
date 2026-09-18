@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import * as Crypto from "expo-crypto";
 import { useLocal, useLumen } from "../../src/shared/provider";
 import {
   AppCard,
@@ -15,7 +14,6 @@ import {
   SyncBadge,
 } from "../../src/shared/ui";
 import type { KnowledgeContent, Entity } from "../../src/db/repository";
-import { paths } from "../../src/sync/engine";
 import { displayDate, parseDate } from "../../src/shared/dates";
 const allowed: Record<string, string[]> = {
   structured_entry: ["draft", "active", "rejected", "archived"],
@@ -44,7 +42,7 @@ const statuses = [
 ];
 export default function Knowledge() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { repo, client, changed, sync } = useLumen();
+  const { repo, ai, changed } = useLumen();
   const { data, error } = useLocal((r) => r.get(id), [id]);
   const [content, setContent] = useState<KnowledgeContent | null>(null),
     [message, setMessage] = useState(""),
@@ -85,7 +83,6 @@ export default function Knowledge() {
         );
       await repo.save(data.kind, value, id, false, baseRevision);
       changed();
-      void sync();
       router.back();
       setMessage(
         "Сохранено на устройстве. Предыдущая версия осталась в истории.",
@@ -129,7 +126,7 @@ export default function Knowledge() {
   async function evidence(ref: { id: string; revision: number }) {
     const target = await repo.get(ref.id);
     if (!target) {
-      setMessage("Источник ещё не загружен. Синхронизируйте данные.");
+      setMessage("Точная версия источника отсутствует в локальном архиве.");
       return;
     }
     Alert.alert(
@@ -149,8 +146,8 @@ export default function Knowledge() {
         {
           text: "Исходная версия",
           onPress: () =>
-            void client
-              .request<Entity[]>(`${paths[target.kind]}/${target.id}/revisions`)
+            void repo
+              .history(target.id)
               .then((rows) => {
                 const source = rows.find((r) => r.revision === ref.revision);
                 Alert.alert(
@@ -163,7 +160,7 @@ export default function Knowledge() {
                 );
               })
               .catch(() =>
-                setMessage("Для исходной облачной версии нужно соединение."),
+                setMessage("Эта версия отсутствует в локальном архиве."),
               ),
         },
       ],
@@ -273,14 +270,14 @@ export default function Knowledge() {
               onPress={() => void evidence(ref)}
             />
           ))}
-          {data.kind === "pattern" && data.sync === "synced" && (
+          {data.kind === "pattern" && data.sync === "local" && (
             <Button
               secondary
               label="Создать гипотезу"
               onPress={() => void create("hypothesis")}
             />
           )}{" "}
-          {data.kind === "hypothesis" && data.sync === "synced" && (
+          {data.kind === "hypothesis" && data.sync === "local" && (
             <>
               <Button
                 secondary
@@ -299,12 +296,10 @@ export default function Knowledge() {
                       {
                         text: "Отправить",
                         onPress: () =>
-                          void client
-                            .request("/ai/jobs", "POST", {
-                              operation_id: Crypto.randomUUID(),
-                              kind: "experiment_suggestion",
-                              sources: [{ id, revision: data.revision }],
-                            })
+                          void ai
+                            .start("experiment_suggestion", [
+                              { id, revision: data.revision },
+                            ])
                             .then(() =>
                               setMessage("Предложение появится в Инсайтах."),
                             )
@@ -342,11 +337,13 @@ export default function Knowledge() {
             secondary
             label="История версий"
             onPress={() =>
-              void client
-                .request<Entity[]>(`${paths[data.kind]}/${id}/revisions`)
+              void repo
+                .history(id)
                 .then(setRevisions)
                 .catch(() =>
-                  setMessage("Для облачной истории нужно соединение."),
+                  setMessage(
+                    "История доступна после перехода на локальное хранение.",
+                  ),
                 )
             }
           />

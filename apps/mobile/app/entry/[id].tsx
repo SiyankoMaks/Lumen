@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import * as Crypto from "expo-crypto";
 import { useLumen, useLocal } from "../../src/shared/provider";
 import {
   Button,
@@ -15,12 +14,11 @@ import {
   SyncBadge,
 } from "../../src/shared/ui";
 import type { EntryContent } from "../../src/db/repository";
-import { paths } from "../../src/sync/engine";
 import { displayDate, parseDate } from "../../src/shared/dates";
 export default function Editor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const fresh = id === "new";
-  const { repo, changed, sync, client } = useLumen();
+  const { repo, changed, ai } = useLumen();
   const { data, error } = useLocal(
     async (r) => ({
       entry: fresh ? null : await r.get(id),
@@ -77,7 +75,6 @@ export default function Editor() {
         baseRevision,
       );
       changed();
-      void sync();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (e) {
@@ -92,19 +89,12 @@ export default function Editor() {
   }
   async function analyze() {
     try {
-      if (!client.tokens) {
-        router.push("/auth");
-        return;
-      }
-      if (data?.entry?.sync !== "synced")
-        throw new Error("Сначала сохраните и синхронизируйте запись.");
-      await client.request("/ai/jobs", "POST", {
-        operation_id: Crypto.randomUUID(),
-        kind: "structured_entry",
-        sources: [{ id, revision: data.entry.revision }],
-      });
+      if (!data?.entry) throw new Error("Сначала сохраните запись.");
+      await ai.start("structured_entry", [
+        { id, revision: data.entry.revision },
+      ]);
       setMessage(
-        "Анализ поставлен в очередь. Результат появится здесь после синхронизации.",
+        "Анализ начат. Результат появится здесь после завершения. Оставьте приложение открытым.",
       );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Анализ недоступен");
@@ -160,7 +150,7 @@ export default function Editor() {
                 onPress={() =>
                   Alert.alert(
                     "Анализ записи",
-                    "Текст этой записи будет отправлен настроенному AI-провайдеру. Результат можно исправить или отклонить.",
+                    "Текст сохранённой версии этой записи будет отправлен в Polza. Запрос оплачивается с вашего баланса. Результат можно исправить или отклонить.",
                     [
                       { text: "Отмена", style: "cancel" },
                       { text: "Отправить", onPress: () => void analyze() },
@@ -187,15 +177,6 @@ export default function Editor() {
                 label="История изменений"
                 onPress={() => {
                   setHistory(data.history);
-                  if (client.tokens)
-                    void client
-                      .request<unknown[]>(`${paths.entry}/${id}/revisions`)
-                      .then(setHistory)
-                      .catch(() =>
-                        setMessage(
-                          "Показана локальная история; облако недоступно.",
-                        ),
-                      );
                 }}
               />
               {history.map((h: any, i) => (
@@ -212,7 +193,7 @@ export default function Editor() {
                 onPress={() =>
                   Alert.alert(
                     "Удалить запись?",
-                    "Удаление синхронизируется с другими устройствами.",
+                    "Запись исчезнет из журнала. Её история останется в локальной базе.",
                     [
                       { text: "Отмена", style: "cancel" },
                       {
