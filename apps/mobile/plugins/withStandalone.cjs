@@ -7,7 +7,7 @@ const {
 module.exports = function withStandalone(config) {
   config = withProjectBuildGradle(config, (mod) => {
     if (!mod.modResults.contents.includes("// Lumen native job pools")) {
-      mod.modResults.contents += `
+      const pools = `
 // Lumen native job pools: constrain Ninja independently of Gradle workers.
 allprojects { subproject ->
     ['com.android.application', 'com.android.library'].each { pluginId ->
@@ -21,6 +21,14 @@ allprojects { subproject ->
     }
 }
 `;
+      const marker = 'apply plugin: "expo-root-project"';
+      if (!mod.modResults.contents.includes(marker))
+        throw new Error("Android root template changed");
+      // ReactRootProjectPlugin evaluates :app immediately; register before it.
+      mod.modResults.contents = mod.modResults.contents.replace(
+        marker,
+        pools + "\n" + marker,
+      );
     }
     return mod;
   });

@@ -19,6 +19,8 @@ npm ci
 ./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build
 # Если внешний диск медленный, рабочий кэш можно направить на NTFS:
 ./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache
+# Текущее размещение SDK: лёгкая платформа на D:, тяжёлые каталоги — junction на E:
+./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache -SdkRoot D:\Lumen-build\sdk
 ```
 
 Сборку лучше запускать из checkout на диске с запасом места: node_modules и
@@ -46,5 +48,8 @@ Ninja ограничен одним заданием компиляции/лин
 Python venv перенесён в D:\Lumen-build\python-venv; старый путь .venv — junction.
 Предыдущий JS export перемещён в D:\Lumen-build\previous-bundles-20260918.
 Для зависимостей использован D:\Lumen-build\npm-cache.
+19.09 создан D:\Lumen-build\sdk: платформа Android 36 хранится на D:;
+ndk/cmake/build-tools/cmdline-tools/licenses/platform-tools — junction на E:.
+Это ускоряет запись тысяч маленьких ресурсов платформы без копирования NDK.
 После успешной сборки можно удалить скачанные ZIP и ненужные временные сборки;
 каталог signing нужно сохранить для обновлений приложения.
