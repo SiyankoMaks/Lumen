@@ -96,3 +96,12 @@
   обычное удаление ключа Polza остаётся отдельным действием.
 - Проверки после обновления: 19 core + 6 UI/SecureStore tests passed,
   TypeScript passed, Expo compatibility check — Dependencies are up to date.
+
+## 2026-09-19 · RESUME-006 — завершение Android SDK
+
+- Повторно прочитаны состояние, ADR и журнал; main и сборочная worktree согласованы.
+- Предыдущий установщик уже не работал. NDK/build-tools/CMake сохранились,
+  платформа Android 36 осталась в незавершённой распаковке.
+- Возобновлена установка только Android 36 и platform-tools. adb установлен;
+  `adb devices` не обнаружил подключённых устройств.
+- APK пока отсутствует; после завершения SDK выполняется подписанная release-сборка.
