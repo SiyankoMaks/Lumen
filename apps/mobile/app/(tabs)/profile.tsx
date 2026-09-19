@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
-import { File, Paths } from "expo-file-system";
-import * as Sharing from "expo-sharing";
+import { File } from "expo-file-system";
+import { saveArchive } from "../../src/platform/archive";
 import * as Picker from "expo-document-picker";
 import { useLumen, useLocal } from "../../src/shared/provider";
 import { loadPolza, savePolza, clearPolza } from "../../src/ai/settings";
@@ -76,18 +76,14 @@ export default function Profile() {
   }
   async function exportData() {
     try {
-      const file = new File(Paths.cache, "lumen-backup.json");
-      file.write(JSON.stringify(await repo.backup(), null, 2));
-      try {
-        await Sharing.shareAsync(file.uri, { mimeType: "application/json" });
-      } finally {
-        file.delete();
-      }
+      await saveArchive(await repo.backup());
       setMessage(
-        "Архив подготовлен. Убедитесь, что вы сохранили его в выбранное место. API-ключ в архив не входит.",
+        "Архив сохранён в выбранной папке. API-ключ в архив не входит.",
       );
     } catch {
-      setMessage("Не удалось создать архив. Проверьте свободное место.");
+      setMessage(
+        "Экспорт не выполнен. Выберите доступную папку и проверьте свободное место.",
+      );
     }
   }
   async function importData() {
@@ -274,11 +270,11 @@ export default function Profile() {
       )}
       <Button
         secondary
-        label="Удалить все данные с телефона"
+        label="Удалить данные приложения"
         onPress={() =>
           Alert.alert(
             "Удалить журнал и ключ?",
-            "Это действие необратимо. Сначала сохраните резервную копию.",
+            "Это действие необратимо. Сначала сохраните резервную копию. Экспортированные файлы останутся в выбранной папке.",
             [
               { text: "Отмена", style: "cancel" },
               {
