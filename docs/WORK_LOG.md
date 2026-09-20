@@ -151,3 +151,21 @@
   с junction по прежним путям. Перед переносом проверены абсолютные границы каталогов.
 - Цель Gradle уточнена до :app:assembleRelease, исключая ненужную упаковку AAR
   всех библиотек. Запущено продолжение без prebuild; APK пока отсутствует.
+
+## 2026-09-21 · RELEASE-011 — подписанный APK 0.2.0
+
+- :app:assembleRelease завершился успешно за 7 мин 3 сек: 544 задачи,
+  165 выполнены, 379 актуальны. APK скопирован в E:\Lumen-build\artifacts\Lumen-0.2.0.apk.
+- Размер 62 645 243 байта; SHA-256:
+  `9976004DBFCE070C69F0B463B947BA6EE93661357F9B27EE73F4013EF768BB0F`.
+- apksigner verify подтверждает подпись v2, один сертификат Lumen Personal / RSA 3072.
+  aapt подтверждает app.lumen.journal, versionCode 2, versionName 0.2.0, minSdk 24,
+  targetSdk 36, ARM64/ARMv7. Debuggable отсутствует (false), backup/cleartext выключены;
+  широких storage/overlay permissions нет.
+- В APK есть assets/index.android.bundle (4 227 272 байта), нативные библиотеки обеих ABI,
+  фиксированный endpoint Polza и код экспорта. Файлов приватной подписи в архиве нет.
+- README и состояние обновлены, добавлена карточка выпуска. Код приложения не менялся
+  после проверок 19 core / 8 UI-platform / TypeScript; эти тесты не выдаются за повторные.
+- На 21.09 adb не видит телефона. Запуск на устройстве и платный запрос Polza не проверены.
+- Перенос npm-кэша в E:\Lumen-build\npm-cache-from-D-20260921 завершён; прежний путь — junction.
+  Prettier исправил только переносы строки условия config plugin; поведение не менялось.

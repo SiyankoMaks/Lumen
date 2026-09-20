@@ -64,5 +64,7 @@ ndk/cmake/build-tools/cmdline-tools/licenses/platform-tools — junction на E:
 Это ускоряет запись тысяч маленьких ресурсов платформы без копирования NDK.
 21.09 каталоги app/build/intermediates/merged_native_libs и cxx перенесены в
 E:\Lumen-build\native-intermediates и подключены junction, сохраняя результаты компиляции.
+Неактивный npm-кэш с D: перенесён в E:\Lumen-build\npm-cache-from-D-20260921;
+путь D:\Lumen-build\npm-cache сохранён через junction. Перенос завершён успешно.
 После успешной сборки можно удалить скачанные ZIP и ненужные временные сборки;
 каталог signing нужно сохранить для обновлений приложения.
