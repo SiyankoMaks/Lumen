@@ -52,7 +52,7 @@ try {
         # Gradle's exit code, not an SDK warning, determines build success.
         $ErrorActionPreference = 'Continue'
         try {
-            & .\gradlew.bat assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m' '-Pkotlin.compiler.execution.strategy=in-process' '-Dorg.gradle.internal.http.connectionTimeout=60000' '-Dorg.gradle.internal.http.socketTimeout=120000' --console=plain --info
+            & .\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m' '-Pkotlin.compiler.execution.strategy=in-process' '-Dorg.gradle.internal.http.connectionTimeout=60000' '-Dorg.gradle.internal.http.socketTimeout=120000' --console=plain --info
             $gradleExitCode = $LASTEXITCODE
         } finally { $ErrorActionPreference = 'Stop' }
         if ($gradleExitCode -ne 0) { throw "Gradle release build failed (exit $gradleExitCode)." }

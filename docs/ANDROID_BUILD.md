@@ -45,6 +45,8 @@ Ninja ограничен одним заданием компиляции/лин
 `LUMEN_NATIVE_BUILD_ROOT`: глубокий путь checkout превышал лимит Ninja в Windows.
 Выбирайте короткий CacheRoot; ограничение CMake описано в
 [CMAKE_OBJECT_PATH_MAX](https://cmake.org/cmake/help/latest/variable/CMAKE_OBJECT_PATH_MAX.html).
+Скрипт запускает `:app:assembleRelease`: APK и необходимые зависимости,
+без отдельной упаковки AAR всех библиотечных проектов.
 
 Проверка подписи: `apksigner verify --verbose <apk>`. Установка при подключённом
 телефоне: `adb install -r <apk>`. Или перенесите APK на телефон и откройте файл,
@@ -60,5 +62,7 @@ Python venv перенесён в D:\Lumen-build\python-venv; старый пу�
 19.09 создан D:\Lumen-build\sdk: платформа Android 36 хранится на D:;
 ndk/cmake/build-tools/cmdline-tools/licenses/platform-tools — junction на E:.
 Это ускоряет запись тысяч маленьких ресурсов платформы без копирования NDK.
+21.09 каталоги app/build/intermediates/merged_native_libs и cxx перенесены в
+E:\Lumen-build\native-intermediates и подключены junction, сохраняя результаты компиляции.
 После успешной сборки можно удалить скачанные ZIP и ненужные временные сборки;
 каталог signing нужно сохранить для обновлений приложения.
