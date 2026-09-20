@@ -1,10 +1,11 @@
-param([string]$ToolsRoot = 'E:\Lumen-build', [string]$CacheRoot = '', [string]$SdkRoot = '', [switch]$SkipPrebuild)
+param([string]$ToolsRoot = 'E:\Lumen-build', [string]$CacheRoot = '', [string]$SdkRoot = '', [string]$JavaHome = '', [switch]$SkipPrebuild)
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $ToolsRoot = [IO.Path]::GetFullPath($ToolsRoot)
 if (!$CacheRoot) { $CacheRoot = $ToolsRoot }
 $CacheRoot = [IO.Path]::GetFullPath($CacheRoot)
-$env:JAVA_HOME = (Get-ChildItem -LiteralPath (Join-Path $ToolsRoot 'java') -Directory | Select-Object -First 1).FullName
+if (!$JavaHome) { $JavaHome = (Get-ChildItem -LiteralPath (Join-Path $ToolsRoot 'java') -Directory | Select-Object -First 1).FullName }
+$env:JAVA_HOME = $JavaHome
 if (!$env:JAVA_HOME) { throw 'Install JDK 21 into ToolsRoot/java first.' }
 if (!$SdkRoot) { $SdkRoot = Join-Path $ToolsRoot 'android-sdk' }
 $env:ANDROID_HOME = [IO.Path]::GetFullPath($SdkRoot)
@@ -14,6 +15,7 @@ $env:TEMP = Join-Path $CacheRoot 'temp'
 $env:TMP = $env:TEMP
 $env:npm_config_cache = Join-Path $CacheRoot 'npm-cache'
 $env:CI = '1'
+$env:NODE_ENV = 'production'
 $env:NODE_OPTIONS = '--max-old-space-size=1536'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $signing = Join-Path $ToolsRoot 'signing'
@@ -45,8 +47,14 @@ try {
     } elseif (!(Test-Path -LiteralPath 'android/gradlew.bat')) { throw 'Run prebuild before using SkipPrebuild.' }
     Push-Location android
     try {
-        & .\gradlew.bat assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m' '-Pkotlin.compiler.execution.strategy=in-process' --console=plain
-        if ($LASTEXITCODE -ne 0) { throw 'Gradle release build failed.' }
+        # Windows PowerShell treats native stderr warnings as errors when redirected.
+        # Gradle's exit code, not an SDK warning, determines build success.
+        $ErrorActionPreference = 'Continue'
+        try {
+            & .\gradlew.bat assembleRelease '-PreactNativeArchitectures=arm64-v8a,armeabi-v7a' --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m' '-Pkotlin.compiler.execution.strategy=in-process' '-Dorg.gradle.internal.http.connectionTimeout=60000' '-Dorg.gradle.internal.http.socketTimeout=120000' --console=plain --info
+            $gradleExitCode = $LASTEXITCODE
+        } finally { $ErrorActionPreference = 'Stop' }
+        if ($gradleExitCode -ne 0) { throw "Gradle release build failed (exit $gradleExitCode)." }
     } finally { Pop-Location }
     $version = (Get-Content app.json -Raw | ConvertFrom-Json).expo.version
     $apk = Join-Path $artifacts "Lumen-$version.apk"

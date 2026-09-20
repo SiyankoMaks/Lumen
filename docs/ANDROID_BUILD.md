@@ -21,6 +21,8 @@ npm ci
 ./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache
 # Текущее размещение SDK: лёгкая платформа на D:, тяжёлые каталоги — junction на E:
 ./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache -SdkRoot D:\Lumen-build\sdk
+# JDK также можно читать с локального NTFS:
+./scripts/build-android.ps1 -ToolsRoot E:\Lumen-build -CacheRoot D:\Lumen-build\fast-cache -SdkRoot D:\Lumen-build\sdk -JavaHome D:\Lumen-build\java\jdk-21.0.12.1+1
 ```
 
 Сборку лучше запускать из checkout на диске с запасом места: node_modules и
@@ -36,6 +38,9 @@ Ninja ограничен одним заданием компиляции/лин
 Скрипт проверяет готовность SDK перед сборкой. `-SkipPrebuild` подходит для
 повторной компиляции неизменённого native-проекта после сетевого сбоя;
 при изменении app.json или config plugin запускайте обычную полную команду.
+Для диагностики загрузок включён журнал Gradle info, ожидание соединения ограничено
+60 секундами, чтения — 120 секундами. Это параметры сборки, не повторов Polza.
+Предупреждения SDK в stderr не считаются ошибкой: проверяется код завершения Gradle.
 
 Проверка подписи: `apksigner verify --verbose <apk>`. Установка при подключённом
 телефоне: `adb install -r <apk>`. Или перенесите APK на телефон и откройте файл,
