@@ -39,6 +39,23 @@ allprojects { subproject ->
     return mod;
   });
   return withAppBuildGradle(config, (mod) => {
+    if (!mod.modResults.contents.includes("System.getenv('LUMEN_NATIVE_BUILD_ROOT')")) {
+      const marker = "android {\n";
+      if (!mod.modResults.contents.includes(marker))
+        throw new Error("Android app template changed");
+      mod.modResults.contents = mod.modResults.contents.replace(
+        marker,
+        `${marker}
+    // Keep generated C++ object paths within Windows native tool limits.
+    def nativeBuildRoot = System.getenv('LUMEN_NATIVE_BUILD_ROOT')
+    if (nativeBuildRoot) {
+        externalNativeBuild {
+            cmake { buildStagingDirectory file(nativeBuildRoot) }
+        }
+    }
+`,
+      );
+    }
     if (mod.modResults.contents.includes("System.getenv('LUMEN_KEYSTORE')"))
       return mod;
     const marker = "signingConfigs {\n";

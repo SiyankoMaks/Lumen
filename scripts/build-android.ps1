@@ -11,6 +11,7 @@ if (!$SdkRoot) { $SdkRoot = Join-Path $ToolsRoot 'android-sdk' }
 $env:ANDROID_HOME = [IO.Path]::GetFullPath($SdkRoot)
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:GRADLE_USER_HOME = Join-Path $CacheRoot 'gradle'
+$env:LUMEN_NATIVE_BUILD_ROOT = Join-Path $CacheRoot 'cxx-app'
 $env:TEMP = Join-Path $CacheRoot 'temp'
 $env:TMP = $env:TEMP
 $env:npm_config_cache = Join-Path $CacheRoot 'npm-cache'

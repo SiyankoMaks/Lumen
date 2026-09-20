@@ -41,6 +41,10 @@ Ninja ограничен одним заданием компиляции/лин
 Для диагностики загрузок включён журнал Gradle info, ожидание соединения ограничено
 60 секундами, чтения — 120 секундами. Это параметры сборки, не повторов Polza.
 Предупреждения SDK в stderr не считаются ошибкой: проверяется код завершения Gradle.
+Промежуточные C++-файлы приложения вынесены в `CacheRoot/cxx-app` через
+`LUMEN_NATIVE_BUILD_ROOT`: глубокий путь checkout превышал лимит Ninja в Windows.
+Выбирайте короткий CacheRoot; ограничение CMake описано в
+[CMAKE_OBJECT_PATH_MAX](https://cmake.org/cmake/help/latest/variable/CMAKE_OBJECT_PATH_MAX.html).
 
 Проверка подписи: `apksigner verify --verbose <apk>`. Установка при подключённом
 телефоне: `adb install -r <apk>`. Или перенесите APK на телефон и откройте файл,

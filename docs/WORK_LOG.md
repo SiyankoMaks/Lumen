@@ -130,3 +130,14 @@
   Исправлена обработка native stderr в Windows PowerShell: SDK warning не заменяет exit code.
 - Запущена повторная сборка с сохранённым native-проектом и кэшем.
   Остаток: получить APK, проверить подпись/manifest/bundle; запуск на телефоне не проверен.
+
+## 2026-09-20 · BUILD-009 — короткий каталог C++ приложения
+
+- На локальном JDK ClassFormatError не повторился. Worklets и Reanimated успешно
+  скомпилированы и слинкованы для arm64-v8a и armeabi-v7a.
+- :app остановился на Ninja Filename longer than 260 characters в Gesture Handler.
+  CMake также предупреждал о невозможности разместить объект в глубоком каталоге.
+- Config plugin задаёт buildStagingDirectory из LUMEN_NATIVE_BUILD_ROOT;
+  скрипт направляет его в короткий CacheRoot/cxx-app, сохраняя кэш библиотек.
+- Prebuild прошёл, настройка присутствует в generated Gradle; повторная сборка выполняется.
+  APK и проверка на устройстве по-прежнему не заявляются готовыми.
