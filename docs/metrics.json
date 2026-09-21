@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-20T22:52:51.713Z",
-  "basis_commit": "88155c0",
-  "commit_count": 18,
+  "generated_at": "2026-09-21T11:35:50.433Z",
+  "basis_commit": "4f07c3f",
+  "commit_count": 19,
   "tracked_and_pending_files": 89,
   "areas": {
     "mobile": {
@@ -18,7 +18,7 @@
     },
     "documentation": {
       "files": 15,
-      "lines": 712
+      "lines": 729
     }
   },
   "note": "Counts describe source files at generation time, not quality or test pass status. Test evidence is in docs/WORK_LOG.md. Baseline includes historical optional backend."
